@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+[x-cloak] {
+    display: none !important;
+}
+
+::selection {
+    color: #17243a;
+    background: #dce6ff;
+}
+
+:focus-visible {
+    outline: 2px solid #3458c8;
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    html {
+        scroll-behavior: smooth;
+    }
+}
