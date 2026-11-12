@@ -43,6 +43,12 @@
             </div>
         @endif
 
+        @if (session('error'))
+            <div role="alert" class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-900">
+                {{ session('error') }}
+            </div>
+        @endif
+
         <div class="grid gap-6 lg:grid-cols-12 lg:items-start">
             {{-- Left Pane (40% width): Read-only Original Source Extracted Text --}}
             <aside class="rounded-lg border border-rule bg-white p-4 sm:p-5 lg:col-span-5 lg:sticky lg:top-20">
@@ -51,11 +57,34 @@
                         <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Original Extracted Source</p>
                         <h2 class="mt-0.5 font-serif text-base font-bold text-ink">Source Reference (Read-Only)</h2>
                     </div>
-                    @if ($post->ai_model)
-                        <span class="rounded bg-paper px-2 py-1 text-[11px] font-medium text-gray-600 border border-rule">
-                            {{ $post->ai_model }}
-                        </span>
-                    @endif
+                    <div class="flex flex-wrap items-center gap-2">
+                        @if ($post->ai_model)
+                            <span class="rounded border border-rule bg-paper px-2 py-1 text-[11px] font-medium text-gray-600">
+                                {{ $post->ai_model }}
+                            </span>
+                        @endif
+                        @if (filled($post->body) || filled($post->source_body))
+                            <form
+                                method="POST"
+                                action="{{ route('admin.posts.regenerate', $post) }}"
+                                x-data="{ regenerating: false }"
+                                @submit="regenerating = true"
+                            >
+                                @csrf
+                                <button
+                                    type="submit"
+                                    :disabled="regenerating"
+                                    class="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <svg x-show="regenerating" x-cloak class="size-3.5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"></path>
+                                    </svg>
+                                    <span x-text="regenerating ? 'Rewriting...' : 'Regenerate Article'">Regenerate Article</span>
+                                </button>
+                            </form>
+                        @endif
+                    </div>
                 </div>
 
                 @if ($post->source_url)

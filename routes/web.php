@@ -50,6 +50,7 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('posts/fetch', [PostController::class, 'fetch'])->name('posts.fetch');
     Route::post('fetch-logs/{log}/retry', [PostController::class, 'retry'])->name('fetch-logs.retry');
     Route::patch('posts/{post}/category', [PostController::class, 'updateCategory'])->name('posts.category');
+    Route::post('posts/{post}/regenerate', [PostController::class, 'regenerate'])->name('posts.regenerate');
     Route::post('posts/{post}/publish', [PostController::class, 'publish'])->name('posts.publish');
     Route::post('posts/{post}/unpublish', [PostController::class, 'unpublish'])->name('posts.unpublish');
     Route::resource('posts', PostController::class)->except(['show']);

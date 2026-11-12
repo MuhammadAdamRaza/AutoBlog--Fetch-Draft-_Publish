@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Contracts\DraftWriter;
 use App\Http\Controllers\Controller;
 use App\Jobs\GenerateDraftFromUrl;
 use App\Models\Post;
 use App\Models\PostFetchLog;
+use App\Services\OpenRouterDraftWriter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 class PostController extends Controller
 {
@@ -35,11 +38,11 @@ class PostController extends Controller
         $posts = Post::query()
             ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                 $query->where(function (Builder $query) use ($search): void {
-                    $query->where('title', 'like', '%'.$search.'%')
-                        ->orWhere('excerpt', 'like', '%'.$search.'%');
+                    $query->where('title', 'like', '%' . $search . '%')
+                        ->orWhere('excerpt', 'like', '%' . $search . '%');
                 });
             })
-            ->when($filters['status'] ?? null, fn (Builder $query, string $status): Builder => $query->where('status', $status))
+            ->when($filters['status'] ?? null, fn(Builder $query, string $status): Builder => $query->where('status', $status))
             ->latest()
             ->orderByDesc('id')
             ->paginate(12)
@@ -149,7 +152,7 @@ class PostController extends Controller
             'category' => $data['category'],
         ]);
 
-        return back()->with('success', 'Post category updated to '.$data['category'].'.');
+        return back()->with('success', 'Post category updated to ' . $data['category'] . '.');
     }
 
     public function fetch(Request $request): RedirectResponse
@@ -192,6 +195,49 @@ class PostController extends Controller
         );
 
         return back()->with('success', 'Fetch re-queued. Refresh in a moment to check draft status.');
+    }
+
+    public function regenerate(Post $post, DraftWriter $writer): RedirectResponse
+    {
+        $contentToRewrite = filled($post->body)
+            ? (string) $post->body
+            : (string) $post->source_body;
+
+        if (blank($contentToRewrite)) {
+            return back()->with('error', 'No article content is available to rewrite.');
+        }
+
+        try {
+            $patterns = OpenRouterDraftWriter::REWRITE_PATTERNS;
+            $lastIndex = session('last_rewrite_pattern_index');
+            $availableIndices = array_values(array_filter(
+                array_keys($patterns),
+                fn (int $index): bool => $index !== $lastIndex
+            ));
+            $nextIndex = $availableIndices[array_rand($availableIndices)];
+            session(['last_rewrite_pattern_index' => $nextIndex]);
+
+            $draft = $writer->write([
+                'title' => $post->title,
+                'body' => $contentToRewrite,
+                'source_url' => (string) ($post->source_url ?: ''),
+                'rewrite' => true,
+                'rewrite_pattern' => $patterns[$nextIndex],
+                ...($post->ai_model ? ['model' => $post->ai_model] : []),
+                ...($post->tone ? ['tone' => $post->tone] : []),
+            ]);
+
+            $post->update([
+                'title' => $draft['title'],
+                'excerpt' => $draft['excerpt'],
+                'body' => $draft['body'],
+                'meta_description' => $draft['meta_description'],
+            ]);
+        } catch (Throwable $exception) {
+            return back()->with('error', $exception->getMessage() ?: 'Could not rewrite article right now.');
+        }
+
+        return back()->with('success', 'Article rewritten with AI.');
     }
 
     /**

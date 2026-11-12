@@ -46,16 +46,16 @@ it('keeps the published total independent from the current search results', func
 it('links public pages through named routes for guests and signed-in editors', function () {
     $this->get(route('blog.index'))
         ->assertOk()
-        ->assertSee('href="'.route('feeds.index').'"', false)
-        ->assertSee('href="'.route('rss').'"', false)
-        ->assertSee('href="'.route('sitemap').'"', false)
+        ->assertSee('href="' . route('feeds.index') . '"', false)
+        ->assertSee('href="' . route('rss') . '"', false)
+        ->assertSee('href="' . route('sitemap') . '"', false)
         ->assertSee('href="#latest-articles"', false)
-        ->assertSee('href="'.route('login').'"', false);
+        ->assertSee('href="' . route('login') . '"', false);
 
     $this->actingAs(User::factory()->create())
         ->get(route('blog.index'))
         ->assertOk()
-        ->assertSee('href="'.route('admin.posts.index').'"', false);
+        ->assertSee('href="' . route('admin.posts.index') . '"', false);
 });
 
 it('shows only published posts on the blog index', function () {
@@ -171,7 +171,7 @@ it('shows related published posts but excludes the current post', function () {
         ->assertDontSee('Related article 4')
         ->assertDontSee('Draft related article');
 
-    expect(substr_count($response->getContent(), 'href="'.route('blog.show', $currentPost).'"'))
+    expect(substr_count($response->getContent(), 'href="' . route('blog.show', $currentPost) . '"'))
         ->toBe(1);
 });
 
@@ -271,7 +271,7 @@ it('brands the sign-in page with the application title', function () {
         ->assertSee('<title>AutoBlog: Fetch, Draft &amp; Publish</title>', false)
         ->assertSee('AutoBlog: Fetch, Draft & Publish')
         ->assertSee('Back to home')
-        ->assertSee('href="'.route('blog.index').'"', false);
+        ->assertSee('href="' . route('blog.index') . '"', false);
 });
 
 it('requires authentication to open the admin posts page', function () {
@@ -439,7 +439,7 @@ it('rejects URLs that exceed the database column length', function () {
     $this->actingAs($user)
         ->from(route('admin.posts.index'))
         ->post(route('admin.posts.fetch'), [
-            'url' => 'https://source.example/'.str_repeat('a', 240),
+            'url' => 'https://source.example/' . str_repeat('a', 240),
         ])
         ->assertSessionHasErrors('url');
 
@@ -492,7 +492,7 @@ it('shows live queue statuses and allows retrying failed fetches on the admin da
         ->assertRedirect();
 
     expect($failedLog->fresh()->status)->toBe('queued');
-    Queue::assertPushed(GenerateDraftFromUrl::class, fn (GenerateDraftFromUrl $job): bool => $job->url === 'https://source.example/article');
+    Queue::assertPushed(GenerateDraftFromUrl::class, fn(GenerateDraftFromUrl $job): bool => $job->url === 'https://source.example/article');
 });
 
 it('shows extracted source text in the split-screen editor', function () {
@@ -532,8 +532,8 @@ it('fails a draft job once when OpenRouter has insufficient credits', function (
     Http::fake([
         'source.example/article' => Http::response(
             '<html><head><title>Source title</title></head><body><article><p>'
-            .str_repeat('Readable article paragraph. ', 5)
-            .'</p></article></body></html>',
+                . str_repeat('Readable article paragraph. ', 5)
+                . '</p></article></body></html>',
         ),
         'openrouter.example/api/v1/chat/completions' => Http::response([
             'error' => [
@@ -574,10 +574,10 @@ it('creates a draft and success log from a fetched article', function () {
     Http::fake([
         'source.example/article' => Http::response(
             '<html><head><title>Source title</title></head><body>'
-            .'<nav><p>Navigation content that should never be part of the article.</p></nav>'
-            .'<article><p>'.str_repeat('Readable article paragraph. ', 5).'</p></article>'
-            .'<footer><p>Footer content that should never be part of the article.</p></footer>'
-            .'</body></html>',
+                . '<nav><p>Navigation content that should never be part of the article.</p></nav>'
+                . '<article><p>' . str_repeat('Readable article paragraph. ', 5) . '</p></article>'
+                . '<footer><p>Footer content that should never be part of the article.</p></footer>'
+                . '</body></html>',
         ),
     ]);
 
@@ -655,11 +655,12 @@ it('generates structured article content through OpenRouter', function () {
         'meta_description' => 'A concise description.',
     ]);
 
-    Http::assertSent(fn (ClientRequest $request): bool => $request->url() === 'https://openrouter.example/api/v1/chat/completions'
-        && $request->hasHeader('Authorization', 'Bearer test-openrouter-key')
-        && $request['model'] === 'openai/gpt-4o-mini'
-        && $request['max_tokens'] === 1200
-        && $request['response_format'] === ['type' => 'json_object']
+    Http::assertSent(
+        fn(ClientRequest $request): bool => $request->url() === 'https://openrouter.example/api/v1/chat/completions'
+            && $request->hasHeader('Authorization', 'Bearer test-openrouter-key')
+            && $request['model'] === 'openai/gpt-4o-mini'
+            && $request['max_tokens'] === 1200
+            && $request['response_format'] === ['type' => 'json_object']
     );
 });
 
@@ -693,9 +694,60 @@ it('preserves paragraph breaks when OpenRouter returns raw newlines in JSON stri
 it('fails clearly when OpenRouter has no API key', function () {
     config()->set('services.openrouter.key', '');
 
-    expect(fn () => app(OpenRouterDraftWriter::class)->write([
+    expect(fn() => app(OpenRouterDraftWriter::class)->write([
         'title' => 'Source title',
         'body' => 'Source article text.',
         'source_url' => 'https://source.example/article',
     ]))->toThrow(RuntimeException::class, 'OpenRouter API key is not configured.');
+});
+
+it('rewrites the current article with AI without re-fetching the source URL', function () {
+    $user = User::factory()->create();
+    $post = Post::factory()->create([
+        'title' => 'Old draft title',
+        'excerpt' => 'Old excerpt',
+        'body' => 'Current frontend article body to rewrite.',
+        'meta_description' => 'Old meta',
+        'source_url' => 'https://source.example/mvc',
+        'source_body' => 'Original extracted source text about MVC architecture.',
+        'ai_model' => 'openai/gpt-4o-mini',
+        'tone' => 'Informative',
+    ]);
+
+    Http::fake();
+
+    app()->bind(DraftWriter::class, fn() => new class implements DraftWriter
+    {
+        public function write(array $article): array
+        {
+            expect($article['body'])->toBe('Current frontend article body to rewrite.')
+                ->and($article['rewrite'] ?? false)->toBeTrue()
+                ->and($article['rewrite_pattern'] ?? '')->not->toBeEmpty();
+
+            return [
+                'title' => 'Regenerated MVC Guide',
+                'excerpt' => 'Fresh summary from AI.',
+                'body' => 'Freshly rewritten article body from AI.',
+                'meta_description' => 'Fresh meta description.',
+            ];
+        }
+    });
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.edit', $post))
+        ->assertOk()
+        ->assertSee('Regenerate Article');
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.regenerate', $post))
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Article rewritten with AI.');
+
+    Http::assertNothingSent();
+
+    $post->refresh();
+    expect($post->title)->toBe('Regenerated MVC Guide')
+        ->and($post->excerpt)->toBe('Fresh summary from AI.')
+        ->and($post->body)->toBe('Freshly rewritten article body from AI.')
+        ->and($post->meta_description)->toBe('Fresh meta description.');
 });
