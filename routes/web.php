@@ -28,6 +28,14 @@ Route::get('/rss.xml', function () {
         ->header('Content-Type', 'application/rss+xml');
 })->name('rss');
 
+Route::get('/feed', function () {
+    return response()
+        ->view('rss', [
+            'posts' => Post::published()->latest('published_at')->orderByDesc('id')->limit(20)->get(),
+        ])
+        ->header('Content-Type', 'application/rss+xml');
+})->name('feed');
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -40,6 +48,8 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
     Route::post('posts/fetch', [PostController::class, 'fetch'])->name('posts.fetch');
+    Route::post('fetch-logs/{log}/retry', [PostController::class, 'retry'])->name('fetch-logs.retry');
+    Route::patch('posts/{post}/category', [PostController::class, 'updateCategory'])->name('posts.category');
     Route::post('posts/{post}/publish', [PostController::class, 'publish'])->name('posts.publish');
     Route::post('posts/{post}/unpublish', [PostController::class, 'unpublish'])->name('posts.unpublish');
     Route::resource('posts', PostController::class)->except(['show']);

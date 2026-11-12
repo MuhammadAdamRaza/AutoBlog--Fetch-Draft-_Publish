@@ -1,85 +1,129 @@
 # AutoBlog: Fetch, Draft & Publish
 
-AutoBlog is a Laravel application for collecting public article sources, preparing editable AI-assisted drafts, and publishing reviewed posts to a public blog.
+AutoBlog is a Laravel 13 editorial publishing platform with a clean, reader-first public journal and an authenticated admin control room that turns external source URLs into structured, editable blog drafts using OpenRouter LLMs.
 
-## Features
+---
 
-- Public blog with search, article pages, related posts, reading time, and share links
-- Authenticated post management with draft, edit, publish, and unpublish actions
-- Fetch an article from a public URL and prepare an editable draft with OpenRouter
-- RSS feed at `/rss.xml` and sitemap at `/sitemap.xml`
-- Database-backed queue for article fetching
+## Key Features
 
-## Requirements
+### Public Journal (`/blog`)
+- **Editorial Design System**: Warm off-white background (`#FAF9F6`), crisp white cards (`#FFFFFF`) with thin `1px` borders (`#E5E7EB`), charcoal typography (`#111827`), deep forest green accents (`#065F46`), and `Newsreader` + `Figtree` fonts.
+- **Sticky Navigation & Search Modal**: Category navigation, instant search modal (`?q=...`), and one-click RSS feed URL copy in the header.
+- **Hero & 3-Column Feed**: 60/40 split featured story at the top, topic filter strip (`All Posts`, `Latest`, `Tutorials`, `News`, `Saved`), and responsive 3-column article grid.
+- **Interactive Reader Sections**:
+  - **Saved Reading List**: Bookmark articles directly in the browser (`localStorage`) and filter by `Saved`.
+  - **Quick Story Preview Modal**: Inspect a story's excerpt, category, reading time, and publish date without leaving the homepage.
+  - **Reading Pace Explorer**: Switch between **Quick Reads (≤ 3 min)** and **Deep Dives (4+ min)** alongside a direct RSS subscribe box.
+- **Focused Article View (`/blog/{slug}`)**: Centered `680px` reading column, reading-time estimate, **Source Reference** attribution link, JSON-LD structured data, and category-matched **Related Posts**.
+- **Syndication & SEO**: `/feed`, `/rss.xml`, `/feeds`, and `/sitemap.xml`.
 
-- PHP 8.3 or later with the SQLite and required Laravel extensions
-- Composer
-- Node.js and npm
-- An OpenRouter API key to generate AI drafts
+### Admin Control Room (`/admin/posts`)
+- **URL-to-Draft Importer**: Paste any source URL and select **Category** (`Tech`, `AI`, `Business`, `Guides`, `Tutorials`, `News`), **OpenRouter Model** (`Claude 3.5 Sonnet`, `GPT-4o Mini`, `GPT-4o`, `Llama 3.1 70B`), and **Tone** (`Informative`, `Casual`, `News`, `Technical`).
+- **Queue & Fetch Activity Log**: Asynchronous `GenerateDraftFromUrl` job tracks `PostFetchLog` status (`queued`, `processing`, `success`, `failed`) with one-click **Retry** for failed fetches.
+- **Inline Category Switching**: Change or assign a post's category directly from the dropdown in the admin posts table before or after publishing.
+- **40/60 Split-Screen Editor**: Review the read-only extracted source text (`source_body`) on the left while editing title, category, slug, cover image URL, excerpt, meta description, and article body on the right.
 
-## Local setup (Windows PowerShell)
+---
 
-Open PowerShell in this project folder and run:
+## Tech Stack
 
-```powershell
-composer install
-Copy-Item .env.example .env
-New-Item -ItemType File -Path database\database.sqlite
-php artisan key:generate
-php artisan migrate
-npm ci
-npm run build
+- **Backend**: PHP `^8.3`, Laravel `^13.17`, Laravel Breeze (authentication), Symfony DomCrawler / CSS Selector (HTML extraction)
+- **Frontend**: Blade, Tailwind CSS, Alpine.js, Vite
+- **AI Drafting**: OpenRouter Chat Completions API (`App\Services\OpenRouterDraftWriter`)
+- **Testing & Code Style**: Pest `^4.7`, Laravel Pint
+
+---
+
+## Local Setup
+
+1. **Install dependencies**
+   ```bash
+   composer install
+   npm install
+   ```
+
+2. **Configure environment**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+
+   Update `.env` with your database settings and OpenRouter credentials:
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=autoblog
+   DB_USERNAME=root
+   DB_PASSWORD=
+
+   QUEUE_CONNECTION=database
+
+   OPENROUTER_API_KEY=your-openrouter-api-key
+   OPENROUTER_API_URL=https://openrouter.ai/api/v1/chat/completions
+   OPENROUTER_DEFAULT_MODEL=openai/gpt-4o-mini
+   ```
+
+3. **Run database migrations**
+   ```bash
+   php artisan migrate
+   ```
+
+4. **Build frontend assets**
+   ```bash
+   npm run build
+   ```
+   *(Or run `npm run dev` during active development.)*
+
+5. **Start the application and queue worker**
+   ```bash
+   php artisan serve
+   php artisan queue:work
+   ```
+   *(You can also use `composer run dev` where configured.)*
+
+---
+
+## Main Routes
+
+| Area | Method & Path | Description |
+| --- | --- | --- |
+| Public | `GET /` → `/blog` | Public journal homepage (filterable by `category` and `q`) |
+| Public | `GET /blog/{post}` | Single article reading view |
+| Public | `GET /feeds` | RSS & sitemap overview page |
+| Public | `GET /feed`, `GET /rss.xml` | RSS 2.0 feed (latest 20 published posts) |
+| Public | `GET /sitemap.xml` | XML sitemap of published posts |
+| Admin (`auth`) | `GET /admin/posts` | Control room with URL importer, queue logs, and posts table |
+| Admin (`auth`) | `POST /admin/posts/fetch` | Dispatch `GenerateDraftFromUrl` job for a URL |
+| Admin (`auth`) | `POST /admin/fetch-logs/{log}/retry` | Retry a failed URL fetch job |
+| Admin (`auth`) | `GET /admin/posts/{post}/edit` | 40/60 split-screen editor with extracted source text |
+| Admin (`auth`) | `PATCH /admin/posts/{post}/category` | Update post category inline from the dashboard |
+| Admin (`auth`) | `POST /admin/posts/{post}/publish` | Publish a draft post |
+| Admin (`auth`) | `POST /admin/posts/{post}/unpublish` | Move a published post back to draft |
+
+---
+
+## Testing & Code Style
+
+Run the feature test suite with Pest:
+```bash
+vendor/bin/pest tests/Feature/AutoBlogTest.php
+```
+*(Note: `tests/Feature/AutoBlogTest.php` includes a production asset URL check that expects `public/hot` not to be present from an active `npm run dev` server.)*
+
+Format modified PHP files with Laravel Pint:
+```bash
+vendor/bin/pint
 ```
 
-Open `.env` and add your OpenRouter key:
+---
 
-```dotenv
-OPENROUTER_API_KEY=your_openrouter_api_key
-OPENROUTER_DEFAULT_MODEL=openai/gpt-4o-mini
-```
+## Key Project Files
 
-Keep the API key private. Never upload `.env` or paste a real API key into GitHub.
-
-Start the web application:
-
-```powershell
-php artisan serve
-```
-
-In a second PowerShell window, from the same project folder, start the queue worker:
-
-```powershell
-php artisan queue:work
-```
-
-Open `http://127.0.0.1:8000`. Register an account through the app to sign in, then manage posts at `/admin/posts`.
-
-## Fetching an article
-
-1. Sign in and open the admin posts page.
-2. Paste a public article URL into **Fetch a source URL** and submit it.
-3. Keep `php artisan queue:work` running while the article is processed.
-4. Open the resulting draft, review and edit it, then publish when ready.
-
-The source site must be publicly reachable. OpenRouter must accept the selected model request and the account must have sufficient API credits. A remaining usage percentage does not necessarily mean API credits are available. If OpenRouter rejects a request, check its account credits, model access, and request activity.
-
-## Tests
-
-```powershell
-php artisan test
-```
-
-## Uploading to GitHub
-
-Create an empty repository on GitHub, then run these commands from this project folder (replace the URL with your repository URL):
-
-```powershell
-git init
-git add .
-git commit -m "Initial AutoBlog project"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPOSITORY.git
-git push -u origin main
-```
-
-The `.gitignore` excludes `.env`, dependencies, and generated build output. Commit source code and lockfiles, not API keys, local databases, or log files.
+- `app/Http/Controllers/BlogController.php` — Public journal listing, search, category filtering, article view, and feeds page
+- `app/Http/Controllers/Admin/PostController.php` — Admin CRUD, URL fetch dispatch, retry, inline category updates, publish/unpublish
+- `app/Services/ArticleFetcher.php` — HTML fetching and text extraction from external source URLs
+- `app/Services/OpenRouterDraftWriter.php` — Structured editorial draft generation via OpenRouter
+- `app/Jobs/GenerateDraftFromUrl.php` — Background job coordinating URL extraction, AI drafting, and `PostFetchLog` updates
+- `app/Models/Post.php` & `app/Models/PostFetchLog.php` — Core models, categories, reading-time calculation, and fetch logs
+- `resources/views/blog/` & `resources/views/admin/posts/` — Public reader views and admin control room views

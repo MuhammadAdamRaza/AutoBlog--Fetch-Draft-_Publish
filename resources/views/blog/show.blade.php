@@ -49,101 +49,150 @@
 @endpush
 
 @section('content')
-    <article class="mx-auto max-w-3xl">
-        <nav class="mb-4 text-sm text-stone-500" aria-label="Breadcrumb">
-            <ol class="flex flex-wrap items-center gap-2">
-                <li><a href="{{ route('blog.index') }}" class="font-medium text-accent underline-offset-4 hover:underline">Journal</a></li>
-                <li aria-hidden="true">/</li>
-                <li aria-current="page" class="max-w-full break-words text-ink">{{ \Illuminate\Support\Str::limit($post->title, 40) }}</li>
-            </ol>
-        </nav>
+    <article>
+        {{-- Header Area (Centered, max-w-3xl) --}}
+        <header class="mx-auto max-w-3xl text-center">
+            <nav class="mb-5 flex justify-center text-xs font-medium text-gray-500" aria-label="Breadcrumb">
+                <ol class="flex flex-wrap items-center gap-2">
+                    <li><a href="{{ route('blog.index') }}" class="text-accent hover:underline">Journal</a></li>
+                    <li aria-hidden="true">/</li>
+                    <li aria-current="page" class="text-gray-700">{{ \Illuminate\Support\Str::limit($post->title, 48) }}</li>
+                </ol>
+            </nav>
 
-        <header class="border-b border-rule py-8 sm:py-12">
-            <p class="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
-                <time datetime="{{ $post->published_at->toAtomString() }}">{{ $post->published_at->format('F j, Y') }}</time>
-                <span aria-hidden="true">·</span>
-                <span>{{ $post->readingMinutes() }} min read</span>
-            </p>
-            <h1 class="mt-4 font-serif text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl">
+            <span class="inline-block rounded bg-accent/10 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-accent">
+                {{ $post->category ?: 'Tech' }}
+            </span>
+
+            <h1 class="mt-4 font-serif text-3xl font-bold leading-tight tracking-tight text-ink sm:text-5xl">
                 {{ $post->title }}
             </h1>
+
             @if ($post->excerpt)
-                <p class="mt-5 text-lg leading-8 text-stone-600">{{ $post->excerpt }}</p>
+                <p class="mt-4 text-lg leading-relaxed text-gray-600">
+                    {{ $post->excerpt }}
+                </p>
             @endif
+
+            <div class="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-y border-rule py-3 text-xs font-medium text-gray-500">
+                <span class="font-semibold text-ink">AutoBlog Editorial</span>
+                <span aria-hidden="true">&bull;</span>
+                <time datetime="{{ $post->published_at->toAtomString() }}">{{ $post->published_at->format('F j, Y') }}</time>
+                <span aria-hidden="true">&bull;</span>
+                <span>{{ $post->readingMinutes() }} min read</span>
+                @if ($post->source_url)
+                    <span aria-hidden="true">&bull;</span>
+                    <span>
+                        Source Reference:
+                        <a href="{{ $post->source_url }}" rel="nofollow noopener" target="_blank" class="font-semibold text-accent underline underline-offset-4 hover:text-ink">
+                            {{ parse_url($post->source_url, PHP_URL_HOST) ?: $post->source_url }}
+                        </a>
+                    </span>
+                @endif
+            </div>
         </header>
 
-        <div class="whitespace-pre-line py-8 font-serif text-lg leading-9 text-ink sm:py-10">
-            {{ $post->body }}
-        </div>
-
-        @if ($post->source_url)
-            <aside class="border-t border-rule py-6 text-sm leading-6 text-stone-600">
-                Source:
-                <a href="{{ $post->source_url }}" rel="nofollow noopener" target="_blank" class="break-all font-medium text-accent underline underline-offset-4">
-                    {{ $post->source_url }}
-                </a>
-            </aside>
+        {{-- Cover Image (max-w-4xl, wide and crisp, shown when cover_image is set) --}}
+        @if ($post->coverUrl())
+            <figure class="mx-auto mt-8 max-w-4xl overflow-hidden rounded-lg border border-rule bg-white">
+                <div class="aspect-video w-full">
+                    <img
+                        src="{{ $post->coverUrl() }}"
+                        alt="{{ $post->title }}"
+                        class="h-full w-full object-cover"
+                    >
+                </div>
+            </figure>
         @endif
 
-        <section aria-label="Share this article" class="border-t border-rule py-6">
-            <div class="flex flex-wrap items-center gap-3">
-                <span class="text-sm font-semibold text-ink">Share this article</span>
+        {{-- Reading Body (max-w-[680px] centered, 18-19px, line-height 1.75) --}}
+        <div class="mx-auto mt-8 max-w-[680px] space-y-6 break-words font-serif text-[17px] leading-[1.75] text-ink sm:mt-10 sm:text-[19px] [&_h2]:mt-10 [&_h2]:font-sans [&_h2]:text-xl [&_h2]:font-bold sm:[&_h2]:text-2xl [&_h3]:mt-8 [&_h3]:font-sans [&_h3]:text-lg [&_h3]:font-semibold sm:[&_h3]:text-xl">
+            @foreach (preg_split('/\R{2,}/', trim($post->body)) ?: [] as $paragraph)
+                <p>{{ trim($paragraph) }}</p>
+            @endforeach
+        </div>
+
+        <div class="mx-auto mt-10 max-w-[680px] space-y-6 border-t border-rule pt-6">
+            @if ($post->source_url)
+                <aside class="rounded-lg border border-rule bg-white p-4 text-sm text-gray-600">
+                    <span class="font-semibold text-ink">Source Reference:</span>
+                    <a href="{{ $post->source_url }}" rel="nofollow noopener" target="_blank" class="break-all font-medium text-accent underline underline-offset-4 hover:text-ink">
+                        {{ $post->source_url }}
+                    </a>
+                </aside>
+            @endif
+
+            <section aria-label="Share this article" class="flex flex-wrap items-center gap-2.5">
+                <span class="w-full text-sm font-semibold text-ink sm:mr-2 sm:w-auto">Share this article</span>
                 <a
                     href="https://twitter.com/intent/tweet?url={{ $shareUrl }}&amp;text={{ $shareTitle }}"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex min-h-10 items-center rounded-full border border-rule bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-accent/40 hover:text-accent"
+                    class="inline-flex items-center rounded-md border border-rule bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 transition hover:border-gray-400 hover:text-ink"
                 >X</a>
                 <a
                     href="https://www.linkedin.com/sharing/share-offsite/?url={{ $shareUrl }}"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex min-h-10 items-center rounded-full border border-rule bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-accent/40 hover:text-accent"
+                    class="inline-flex items-center rounded-md border border-rule bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 transition hover:border-gray-400 hover:text-ink"
                 >LinkedIn</a>
                 <a
                     href="https://wa.me/?text={{ $shareTitle }}%20{{ $shareUrl }}"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex min-h-10 items-center rounded-full border border-rule bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-accent/40 hover:text-accent"
+                    class="inline-flex items-center rounded-md border border-rule bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 transition hover:border-gray-400 hover:text-ink"
                 >WhatsApp</a>
                 <button
                     id="copy-article-link"
                     type="button"
-                    class="inline-flex min-h-10 items-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                    class="inline-flex items-center rounded-md bg-accent px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-ink"
                 >
                     Copy link
                 </button>
-                <span id="copy-link-status" class="text-sm text-stone-600" role="status" aria-live="polite"></span>
-            </div>
-        </section>
+                <span id="copy-link-status" class="text-xs text-gray-600" role="status" aria-live="polite"></span>
+            </section>
+        </div>
 
+        {{-- Related Posts (3 cards, same category) --}}
         @if ($related->isNotEmpty())
-            <section aria-labelledby="related-heading" class="border-t border-rule py-8 sm:py-10">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Keep reading</p>
-                <h2 id="related-heading" class="mt-2 font-serif text-2xl font-semibold text-ink">More from the journal</h2>
-                <div class="mt-5 grid gap-3">
+            <section aria-labelledby="related-heading" class="mt-14 border-t border-rule pt-10">
+                <div class="mb-6 flex items-baseline justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-accent">Related Posts</p>
+                        <h2 id="related-heading" class="mt-1 font-serif text-2xl font-bold text-ink">More from the journal</h2>
+                    </div>
+                    <a href="{{ route('blog.index') }}" class="text-sm font-semibold text-accent hover:text-ink">
+                        All articles &rarr;
+                    </a>
+                </div>
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
                     @foreach ($related as $item)
-                        <article class="rounded-2xl border border-rule bg-white p-5 transition hover:border-accent/30 hover:shadow-sm">
-                            <p class="text-xs font-medium text-stone-500">
-                                <time datetime="{{ $item->published_at->toAtomString() }}">{{ $item->published_at->format('F j, Y') }}</time>
-                                <span aria-hidden="true">·</span>
-                                {{ $item->readingMinutes() }} min read
-                            </p>
-                            <h3 class="mt-2 font-serif text-lg font-semibold leading-7 text-ink">
-                                <a href="{{ route('blog.show', $item) }}" class="transition hover:text-accent">{{ $item->title }}</a>
-                            </h3>
-                            @if ($item->excerpt)
-                                <p class="mt-2 text-sm leading-6 text-stone-600">{{ $item->excerpt }}</p>
+                        <a href="{{ route('blog.show', $item) }}" class="group flex flex-col overflow-hidden rounded-lg border border-rule bg-white transition hover:border-gray-400">
+                            @if ($item->coverUrl())
+                                <div class="aspect-video w-full overflow-hidden border-b border-rule bg-paper">
+                                    <img
+                                        src="{{ $item->coverUrl() }}"
+                                        alt="{{ $item->title }}"
+                                        class="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                                        loading="lazy"
+                                    >
+                                </div>
                             @endif
-                        </article>
+                            <div class="p-4">
+                                <p class="text-xs font-semibold uppercase tracking-wider text-accent">
+                                    {{ $item->category ?: 'Tech' }} &bull; {{ $item->readingMinutes() }} min read
+                                </p>
+                                <h3 class="mt-2 line-clamp-2 font-serif text-lg font-bold leading-snug text-ink group-hover:text-accent">
+                                    {{ $item->title }}
+                                </h3>
+                                @if ($item->excerpt)
+                                    <p class="mt-2 line-clamp-2 text-sm text-gray-600">{{ $item->excerpt }}</p>
+                                @endif
+                            </div>
+                        </a>
                     @endforeach
                 </div>
             </section>
         @endif
-
-        <a href="{{ route('blog.index') }}" class="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-accent transition hover:text-ink">
-            <span aria-hidden="true">←</span>
-            Back to all articles
-        </a>
     </article>
 @endsection

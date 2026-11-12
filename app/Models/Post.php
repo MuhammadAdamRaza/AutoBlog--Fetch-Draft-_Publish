@@ -14,13 +14,21 @@ class Post extends Model
     /** @use HasFactory<PostFactory> */
     use HasFactory;
 
+    /** @var array<int, string> */
+    public const CATEGORIES = ['Tech', 'AI', 'Business', 'Guides', 'Tutorials', 'News'];
+
     protected $fillable = [
         'title',
         'slug',
+        'category',
         'excerpt',
         'body',
         'meta_description',
+        'cover_image',
         'source_url',
+        'source_body',
+        'ai_model',
+        'tone',
         'status',
         'published_at',
     ];
@@ -75,12 +83,32 @@ class Post extends Model
      */
     public function related(int $limit = 3): Collection
     {
-        return static::published()
+        $sameCategory = static::published()
             ->whereKeyNot($this->getKey())
+            ->where('category', $this->category ?: 'Tech')
             ->latest('published_at')
             ->orderByDesc('id')
             ->limit($limit)
             ->get();
+
+        if ($sameCategory->count() >= $limit) {
+            return $sameCategory;
+        }
+
+        $fallback = static::published()
+            ->whereKeyNot($this->getKey())
+            ->whereNotIn('id', $sameCategory->pluck('id'))
+            ->latest('published_at')
+            ->orderByDesc('id')
+            ->limit($limit - $sameCategory->count())
+            ->get();
+
+        return $sameCategory->concat($fallback);
+    }
+
+    public function coverUrl(): ?string
+    {
+        return filled($this->cover_image) ? $this->cover_image : null;
     }
 
     public function isPublished(): bool

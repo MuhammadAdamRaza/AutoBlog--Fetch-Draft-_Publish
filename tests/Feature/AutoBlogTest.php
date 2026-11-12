@@ -16,6 +16,20 @@ it('redirects the homepage to the public blog', function () {
         ->assertRedirect(route('blog.index'));
 });
 
+it('uses the forwarded HTTPS host for assets behind the local tunnel', function () {
+    $this->withServerVariables([
+        'REMOTE_ADDR' => '127.0.0.1',
+    ])->withHeaders([
+        'X-Forwarded-Host' => 'upstream-mustang-shorten.ngrok-free.dev',
+        'X-Forwarded-Proto' => 'https',
+        'X-Forwarded-Port' => '443',
+    ])->get(route('blog.index'))
+        ->assertOk()
+        ->assertSee('https://upstream-mustang-shorten.ngrok-free.dev/build/assets/', false)
+        ->assertDontSee('http://localhost:8000/build/assets/', false)
+        ->assertDontSee('localhost:5173', false);
+});
+
 it('keeps the published total independent from the current search results', function () {
     Post::factory()->published()->count(2)->create();
     Post::factory()->published()->create([
@@ -448,13 +462,14 @@ it('queues an article fetch for an authenticated request', function () {
     });
 });
 
-it('does not show fetch logs on the admin posts page', function () {
+it('shows live queue statuses and allows retrying failed fetches on the admin dashboard', function () {
     $user = User::factory()->create();
+    Queue::fake([GenerateDraftFromUrl::class]);
 
-    PostFetchLog::create([
+    $failedLog = PostFetchLog::create([
         'source_url' => 'https://source.example/article',
         'status' => 'failed',
-        'error' => 'HTTP request returned status code 402: This request requires more credits, or fewer max_tokens.',
+        'error' => 'HTTP request returned status code 402: This request requires more credits.',
     ]);
 
     PostFetchLog::create([
@@ -466,20 +481,45 @@ it('does not show fetch logs on the admin posts page', function () {
     $this->actingAs($user)
         ->get(route('admin.posts.index'))
         ->assertOk()
-        ->assertDontSee('Recent fetches')
-        ->assertSee('From source link to published post')
-        ->assertSee('Add a source link')
-        ->assertSee('Review your draft')
-        ->assertSee('Publish when ready')
-        ->assertDontSee('Needs attention')
-        ->assertDontSee('OpenRouter needs more credits for this draft.')
-        ->assertDontSee('Draft ready')
-        ->assertDontSee('Draft created.')
-        ->assertDontSee('https://source.example/article')
-        ->assertDontSee('https://source.example/successful-article')
+        ->assertSee('Queue &amp; AI Generation Activity', false)
+        ->assertSee('Draft Ready')
+        ->assertSee('Failed')
+        ->assertSee('Retry')
         ->assertDontSee('HTTP request returned status code 402');
 
-    $this->assertDatabaseCount('post_fetch_logs', 2);
+    $this->actingAs($user)
+        ->post(route('admin.fetch-logs.retry', $failedLog))
+        ->assertRedirect();
+
+    expect($failedLog->fresh()->status)->toBe('queued');
+    Queue::assertPushed(GenerateDraftFromUrl::class, fn (GenerateDraftFromUrl $job): bool => $job->url === 'https://source.example/article');
+});
+
+it('shows extracted source text in the split-screen editor', function () {
+    $user = User::factory()->create();
+    $post = Post::factory()->create([
+        'source_url' => 'https://source.example/original',
+        'source_body' => 'Original extracted paragraph from source URL.',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.edit', $post))
+        ->assertOk()
+        ->assertSee('Source Reference (Read-Only)')
+        ->assertSee('Original extracted paragraph from source URL.');
+});
+
+it('updates a post category directly from the admin posts table dropdown', function () {
+    $user = User::factory()->create();
+    $post = Post::factory()->create(['category' => 'Tech']);
+
+    $this->actingAs($user)
+        ->patch(route('admin.posts.category', $post), [
+            'category' => 'AI',
+        ])
+        ->assertRedirect();
+
+    expect($post->fresh()->category)->toBe('AI');
 });
 
 it('fails a draft job once when OpenRouter has insufficient credits', function () {

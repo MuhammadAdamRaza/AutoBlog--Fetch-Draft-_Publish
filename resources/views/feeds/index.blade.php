@@ -1,7 +1,7 @@
 @extends('layouts.blog')
 
-@section('title', 'Follow the journal | '.config('app.name'))
-@section('description', 'Subscribe to the '.config('app.name').' RSS feed.')
+@section('title', 'RSS Feed Automation & Feeds | '.config('app.name'))
+@section('description', 'RSS feed automation platform for content creators. Subscribe to '.config('app.name').' automated RSS 2.0 XML feeds and sitemaps.')
 
 @section('content')
     <div class="mx-auto max-w-4xl">
@@ -11,26 +11,26 @@
         </a>
 
         <section class="mt-10 border-b border-rule pb-9 sm:mt-14 sm:pb-12">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Follow the journal</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent">RSS feed automation platform for content creators</p>
             <h1 class="mt-3 max-w-3xl font-serif text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl">
-                New stories, delivered your way.
+                Automated RSS feeds, updated on every publish.
             </h1>
             <p class="mt-4 max-w-2xl text-base leading-7 text-stone-600 sm:text-lg sm:leading-8">
-                Follow the journal with any RSS reader. New published articles will appear automatically.
+                Every curated journal article you publish immediately updates this RSS 2.0 feed and XML sitemap—ideal for content creators, feed readers, and automated syndication workflows.
             </p>
         </section>
 
         <section class="grid gap-10 py-9 sm:grid-cols-[minmax(0,1fr)_15rem] sm:gap-12 sm:py-12">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-accent">RSS feed</p>
-                <h2 class="mt-2 font-serif text-2xl font-semibold text-ink">A quieter way to keep up</h2>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Automated RSS 2.0 endpoint</p>
+                <h2 class="mt-2 font-serif text-2xl font-semibold text-ink">Syndicate and subscribe without manual updates</h2>
                 <p class="mt-3 text-sm leading-7 text-stone-600">
-                    RSS is a standard feed format. Open the link below in your feed reader to subscribe. It is normal to see XML instead of a designed webpage. A regular browser displays the feed in its standard format.
+                    RSS is a standard feed format. Open the link below in your feed reader or automation workflow to subscribe. It is normal to see XML instead of a designed webpage. A regular browser displays the feed in its standard format.
                 </p>
                 <p class="mt-5 break-all border-y border-rule py-3 font-mono text-xs leading-6 text-stone-600">{{ route('rss') }}</p>
                 <a
                     href="{{ route('rss') }}"
-                    class="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-accent/20 transition hover:bg-ink focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                    class="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-ink focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                 >
                     Open RSS feed
                     <span aria-hidden="true">↗</span>
@@ -44,16 +44,16 @@
             </div>
 
             <aside class="border-t border-rule pt-6 sm:border-l sm:border-t-0 sm:pl-7 sm:pt-0">
-                <h2 class="font-semibold text-ink">How to subscribe</h2>
+                <h2 class="font-semibold text-ink">How to automate &amp; subscribe</h2>
                 <ol class="mt-3 grid gap-3 text-sm leading-6 text-stone-600">
-                    <li><span class="font-semibold text-ink">01.</span> Copy the feed address.</li>
-                    <li><span class="font-semibold text-ink">02.</span> Paste it into your RSS reader.</li>
-                    <li><span class="font-semibold text-ink">03.</span> Read each new post there.</li>
+                    <li><span class="font-semibold text-ink">01.</span> Copy the RSS feed address.</li>
+                    <li><span class="font-semibold text-ink">02.</span> Add it to your RSS reader or automation trigger.</li>
+                    <li><span class="font-semibold text-ink">03.</span> Receive every newly published article automatically.</li>
                 </ol>
                 <a href="{{ route('blog.index') }}" class="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline underline-offset-4 hover:text-ink">
                     Browse all articles
                 </a>
-            </div>
+            </aside>
         </section>
     </div>
 @endsection

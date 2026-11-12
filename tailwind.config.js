@@ -12,10 +12,10 @@ export default {
     theme: {
         extend: {
             colors: {
-                paper: '#f3f6fb',
-                ink: '#17243a',
-                rule: '#dce4ef',
-                accent: '#3458c8',
+                paper: '#FAF9F6',
+                ink: '#111827',
+                rule: '#E5E7EB',
+                accent: '#065F46',
             },
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
