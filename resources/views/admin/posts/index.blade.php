@@ -25,8 +25,16 @@
 
     <div class="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         @if (session('success'))
-            <div role="status" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
-                {{ session('success') }}
+            <div
+                role="status"
+                x-data="{ show: true }"
+                x-init="setTimeout(() => show = false, 3500)"
+                x-show="show"
+                x-transition.opacity
+                class="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900"
+            >
+                <span>{{ session('success') }}</span>
+                <button type="button" @click="show = false" aria-label="Dismiss" class="rounded p-0.5 text-emerald-700 hover:bg-emerald-100">&times;</button>
             </div>
         @endif
 
